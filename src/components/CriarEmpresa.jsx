@@ -6,8 +6,11 @@ import {
     Box,
     Typography, 
     TextField, 
-    Button 
+    Button,
+    Alert
 } from '@mui/material';
+import CheckIcon from '@mui/icons-material/Check';
+import ErrorIcon from '@mui/icons-material/Error';
 import axios from 'axios';
 
 
@@ -27,25 +30,33 @@ const style = {
     gap: '1em'
 };
 
-const handleCreate = async (cnpj) => {
-    try {
-        const dados = {
-            cnpj: cnpj
-        };
-        const response = await axios.post(process.env.REACT_APP_API_URL + "/empresa", dados);
-        console.log(response.data);
-        setTimeout(() => {
-          //this.msg_sucesso = '';
-          window.location.reload(true);
-        }, 2000);
-    } catch (error) {
-        console.error('Ocorreu um erro, tente novamente.\nErro:', error);
-    }
-};
-
 const CriarEmpresa = ({ open, onClose }) => {
 
     const [cnpj, setCnpj] = useState('');
+    const [feedback, setFeedback] = useState(null);
+
+    const handleCreate = async (cnpj) => {
+        try {
+            const dados = {
+                cnpj: cnpj
+            };
+            const response = await axios.post(process.env.REACT_APP_API_URL + "/empresa", dados);
+            console.log(response.data);
+            setFeedback({
+                type: 'success',
+                message: 'Empresa cadastrada com sucesso!'
+            });
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 3000);
+        } catch (error) {
+            setFeedback({
+                type: 'error',
+                message: 'Ocorreu um erro, tente novamente.'
+            });
+            console.error('Ocorreu um erro, tente novamente.\nErro:', error);
+        }
+    };
 
     return (
         <div>
@@ -64,6 +75,11 @@ const CriarEmpresa = ({ open, onClose }) => {
                         value={cnpj}
                         onChange={(e) => setCnpj(e.target.value)}
                     />
+                    {feedback && (
+                        <Alert icon={feedback.type === 'success' ? <CheckIcon /> : <ErrorIcon />} severity={feedback.type}>
+                            {feedback.message}
+                        </Alert>
+                    )}
                     <Box>
                         <Button variant="contained" color="error" onClick={onClose} style={{ marginRight: '20px' }}>Fechar</Button>
                         <Button variant="contained" onClick={() => handleCreate(cnpj)}>Cadastrar</Button>
