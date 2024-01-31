@@ -15,10 +15,10 @@ import {
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import CheckIcon from '@mui/icons-material/Check';
 import ErrorIcon from '@mui/icons-material/Error';
+import DownloadIcon from '@mui/icons-material/Download';
 import CriarEmpresa from './CriarEmpresa';
 import axios from 'axios';
 import { styled } from '@mui/material/styles';
-import { saveAs } from 'file-saver';
 
 const Div = styled('div')(({ theme }) => ({
     ...theme.typography.button,
@@ -74,29 +74,20 @@ const GerarDocumento = ({ open, onClose }) => {
 
     //  Prazos
     const [prazo_exec, setPrazoExec] = useState('');
-    let [prazo_exec_tempo, setPrazoExecTempo] = useState('');
+    const [prazo_exec_tempo, setPrazoExecTempo] = useState('');
     const [prazo_vig, setPrazoVig] = useState('');
-    let [prazo_vig_tempo, setPrazoVigTempo] = useState('');
+    const [prazo_vig_tempo, setPrazoVigTempo] = useState('');
 
     //  Outros
     const [objeto, setObjeto] = useState('');
-
+    const [n_contrato, setNContrato] = useState('');
     const [data_base, setDataBase] = useState('');
     const [data_base_mes, setDataBaseMes] = useState('');
     const [documento_base, setDocumentoBase] = useState('');
     const [termo_cooperacao, setTermoCooperacao] = useState('');
-
     const [openModal, setOpenModal] = useState(false);
     const [activeStep, setActiveStep] = useState(1);
-
     const [feedback, setFeedback] = useState(null);
-
-    const tempoEnum = [
-        "dias",
-        "semanas",
-        "meses",
-        "anos"
-    ];
 
     const mesesEnum = [
         "Janeiro",
@@ -134,52 +125,71 @@ const GerarDocumento = ({ open, onClose }) => {
         }
     }, [open]);
 
-    const handleGerar = async () => {
+    const handleGerar = async (tipo) => {
         try {
-            handleFormat();
+            if (activeStep === 5) {
+                if (
+                    !objeto.trim() ||
+                    !data_base.trim() ||
+                    !data_base_mes.trim() ||
+                    !documento_base.trim() ||
+                    !termo_cooperacao.trim()
+                ) {
+                    setFeedback({
+                        type: 'error',
+                        message: 'Todos os campos devem ser preenchidos.'
+                    });
+                    return;
+                }
+            }
 
             const registroGeral = {
-                numero: registro_geral,
-                orgaoExpedidor: orgao_expedidor
+                numero: registro_geral.trim(),
+                orgaoExpedidor: orgao_expedidor.trim()
             };
 
             const enderecoRepresentante = {
-                enderecoCompleto: endereco_representante,
-                cidade: cidade,
+                enderecoCompleto: endereco_representante.trim(),
+                cidade: cidade.trim(),
                 estado: estado
             };
 
             const dadosRepresentante = {
-                nome_representante: nome_representante,
-                naturalidade: naturalidade,
-                estadoCivil: estado_civil,
-                profissao: profissao,
-                cpf: cpf,
+                nome_representante: nome_representante.trim(),
+                naturalidade: naturalidade.trim(),
+                estadoCivil: estado_civil.trim(),
+                profissao: profissao.trim(),
+                cpf: cpf.trim(),
                 registroGeral,
                 enderecoRepresentante
             };
 
+            const tempo_exec = formatarTempo(prazo_exec_tempo);
+            const tempo_vig = formatarTempo(prazo_vig_tempo);
+
             const dadosDocumento = {
-                objeto: objeto,
-                valor: valor,
-                funcao: funcao,
-                sub_funcao: sub_funcao,
-                programa: programa,
-                acao: acao,
-                natureza_despesa: natureza_despesa,
-                sub_elemento: sub_elemento,
-                fonte: fonte,
-                origem_recurso: origem_recurso,
-                prazo_exec: prazo_exec,
-                prazo_exec_tempo: prazo_exec_tempo,
-                prazo_vig: prazo_vig,
-                prazo_vig_tempo: prazo_vig_tempo,
-                data_base: data_base_mes + "/" + data_base,
-                documento_base: documento_base,
-                termo_cooperacao: termo_cooperacao
+                n_contrato: n_contrato.trim(),
+                objeto: objeto.trim(),
+                valor: valor.trim(),
+                funcao: funcao.trim(),
+                sub_funcao: sub_funcao.trim(),
+                programa: programa.trim(),
+                acao: acao.trim(),
+                natureza_despesa: natureza_despesa.trim(),
+                sub_elemento: sub_elemento.trim(),
+                fonte: fonte.trim(),
+                origem_recurso: origem_recurso.trim(),
+                prazo_exec: prazo_exec.trim(),
+                prazo_exec_tempo: tempo_exec,
+                prazo_vig: prazo_vig.trim(),
+                prazo_vig_tempo: tempo_vig,
+                data_base: data_base_mes + "/" + data_base.trim(),
+                documento_base: documento_base.trim(),
+                termo_cooperacao: termo_cooperacao.trim()
             };
             const dados = {
                 idEmpresa: empresaSelecionada.id,
+                tipoDoc: tipo,
                 dadosRepresentante,
                 dadosDocumento
             };
@@ -198,11 +208,6 @@ const GerarDocumento = ({ open, onClose }) => {
             const link = document.createElement('a');
             link.href = window.URL.createObjectURL(blob);
             link.download = 'contrato.docx';
-            link.addEventListener('click', () => {
-                setTimeout(() => {
-                    window.location.reload(true);
-                }, 3000);
-            });
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -215,30 +220,30 @@ const GerarDocumento = ({ open, onClose }) => {
         }
     };
 
-    const handleFormat = () => {
-        if (prazo_exec === "1") {
-            if (prazo_exec_tempo === "dias") {
-                prazo_exec_tempo = "dia";
-            } else if (prazo_exec_tempo === "semanas") {
-                prazo_exec_tempo = "semana";
-            } else if (prazo_exec_tempo === "meses") {
-                prazo_exec_tempo = "mês";
-            } else {
-                prazo_exec_tempo = "ano";
-            }
-        }
-        if (prazo_vig === "1") {
-            if (prazo_vig_tempo === "dias") {
-                prazo_vig_tempo = "dia";
-            } else if (prazo_vig_tempo === "semanas") {
-                prazo_vig_tempo = "semana";
-            } else if (prazo_vig_tempo === "meses") {
-                prazo_vig_tempo = "mês";
-            } else {
-                prazo_vig_tempo = "ano";
-            }
+    const formatarTempo = (tempo) => {
+        if (tempo === "dias") {
+            return "dia";
+        } else if (tempo === "semanas") {
+            return "semana";
+        } else if (tempo === "meses") {
+            return "mês";
+        } else if (tempo === "anos"){
+            return "ano";
+        } else {
+            return tempo;
         }
     }
+
+    const formatarCPF = (cpf) => {
+        const valor = cpf.replace(/\D/g, '');
+        const valorLimitado= valor.slice(0, 11);
+        const cpfFormatado= valorLimitado.replace(
+            /^(\d{3})(\d{3})?(\d{3})?(\d{0,2})?/,
+            (match, p1, p2, p3, p4) =>
+                p1 + (p2 ? `.${p2}` : '') + (p3 ? `.${p3}` : '') + (p4 ? `-${p4}` : '')
+        );
+        return cpfFormatado;
+      };
 
     const handleOpenModal = () => {
         setOpenModal(true);
@@ -249,10 +254,83 @@ const GerarDocumento = ({ open, onClose }) => {
     };
 
     const handleNextStep = () => {
+        if (activeStep === 1 && !empresaSelecionada) {
+            setFeedback({
+                type: 'error',
+                message: 'Selecione ou cadastre uma empresa.'
+            });
+            return;
+        }
+
+        if (activeStep === 2) {
+            if(
+                !nome_representante.trim() ||
+                !naturalidade.trim() ||
+                !estado_civil.trim() ||
+                !profissao.trim() ||
+                !registro_geral.trim() ||
+                !orgao_expedidor.trim() || 
+                !cpf.trim() ||
+                !endereco_representante.trim() ||
+                !cidade.trim() || 
+                !estado.trim()
+            ) {
+                setFeedback({
+                    type: 'error',
+                    message: 'Todos os campos devem ser preenchidos.'
+                });
+                return;
+            }
+            if (cpf.length !== 14) {
+                setFeedback({
+                    type: 'error',
+                    message: 'CPF no formato inválido.'
+                });
+                return;
+            }
+        }
+
+        if (activeStep === 3) {
+            if (
+                !valor.trim() ||
+                !funcao.trim() ||
+                !sub_funcao.trim() ||
+                !programa.trim() ||
+                !acao.trim() ||
+                !natureza_despesa.trim() ||
+                !sub_elemento.trim() ||
+                !fonte.trim() ||
+                !origem_recurso.trim()
+            ) {
+                setFeedback({
+                    type: 'error',
+                    message: 'Todos os campos devem ser preenchidos.'
+                });
+                return;    
+            }
+        }
+
+        if (activeStep === 4) {
+            if (
+                !prazo_exec.trim() ||
+                !prazo_exec_tempo?.trim() ||
+                !prazo_vig.trim() ||
+                !prazo_vig_tempo?.trim()
+            ) {
+                setFeedback({
+                    type: 'error',
+                    message: 'Todos os campos devem ser preenchidos.'
+                });
+                return;   
+            }
+        }
+
+        setFeedback(null);
         setActiveStep((prevStep) => prevStep + 1);
     };
 
     const handlePreviousStep = () => {
+        setFeedback(null);
         setActiveStep((prevStep) => prevStep - 1);
     };
 
@@ -307,7 +385,11 @@ const GerarDocumento = ({ open, onClose }) => {
                                     id="nome-representante"
                                     label="Nome"
                                     value={nome_representante}
-                                    onChange={(e) => setNomeRepresentante(e.target.value)}
+                                    onChange={(e) => {
+                                        const input = e.target.value;
+                                        const output = input.slice(0, 200);
+                                        setNomeRepresentante(output);
+                                    }}
                                     style={{display: "flex", flexDirection: "column", marginBottom: "1rem"}}
                                 />
                                 <Box>
@@ -316,7 +398,11 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="naturalidade"
                                         label="Naturalidade"
                                         value={naturalidade}
-                                        onChange={(e) => setNaturalidade(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const output = input.slice(0, 30);
+                                            setNaturalidade(output);
+                                        }}
                                         style={{marginLeft: "0.7rem", marginRight: "1rem", marginBottom: "1rem"}}
                                     />
                                     <TextField
@@ -324,7 +410,11 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="estado-civil"
                                         label="Estado Civil"
                                         value={estado_civil}
-                                        onChange={(e) => setEstadoCivil(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const output = input.slice(0, 30);
+                                            setEstadoCivil(output);
+                                        }}
                                         style={{marginRight: "1rem", marginBottom: "1rem"}}
                                     />
                                     <TextField
@@ -332,7 +422,11 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="profissao"
                                         label="Profissão"
                                         value={profissao}
-                                        onChange={(e) => setProfissao(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const output = input.slice(0, 60);
+                                            setProfissao(output);
+                                        }}
                                         style={{marginRight: "1rem", marginBottom: "1rem"}}
                                     />
                                 </Box>
@@ -342,7 +436,12 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="registro-geral"
                                         label="RG"
                                         value={registro_geral}
-                                        onChange={(e) => setRegistroGeral(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const numerico = input.replace(/\D/g, '');
+                                            const output = numerico.slice(0, 14);
+                                            setRegistroGeral(output);
+                                        }}
                                         style={{marginLeft: "0.7rem", marginRight: "1rem", marginBottom: "1rem"}}
                                     />
                                     <TextField
@@ -350,7 +449,11 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="orgao-expedidor"
                                         label="Órgão Expedidor"
                                         value={orgao_expedidor}
-                                        onChange={(e) => setOrgaoExpedidor(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const output = input.slice(0, 20);
+                                            setOrgaoExpedidor(output);
+                                        }}
                                         style={{marginRight: "1rem", marginBottom: "1rem"}}
                                     />
                                     <TextField
@@ -358,7 +461,11 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="cpf"
                                         label="CPF"
                                         value={cpf}
-                                        onChange={(e) => setCPF(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const output = formatarCPF(input);
+                                            setCPF(output);
+                                        }}
                                         style={{marginRight: "1rem", marginBottom: "1rem"}}
                                     />
                                 </Box>
@@ -376,13 +483,17 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="cidade"
                                         label="Cidade"
                                         value={cidade}
-                                        onChange={(e) => setCidade(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const output = input.slice(0, 50);
+                                            setCidade(output);
+                                        }}
                                         style={{width: "15rem", marginRight: "1rem", marginBottom: "1rem"}}
                                     />
                                     <Autocomplete
                                         disablePortal
                                         id="estado"
-                                        options={estadosEnum}
+                                        options={["", ...estadosEnum]}
                                         getOptionLabel={(estado) => estado} 
                                         onChange={(event, newValue) => setEstado(newValue)}
                                         value={estado}
@@ -405,7 +516,12 @@ const GerarDocumento = ({ open, onClose }) => {
                                     id="valor"
                                     label="Valor Contratual"
                                     value={valor}
-                                    onChange={(e) => setValor(e.target.value)}
+                                    onChange={(e) => {
+                                        const input = e.target.value;
+                                        const numerico = input.replace(/\D/g, '');
+                                        const output = numerico.slice(0, 35);
+                                        setValor(output);
+                                    }}
                                     style={{width: "48rem",display: "flex", flexDirection: "column", marginBottom: "1rem"}}
                                 />
                                 <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
@@ -414,7 +530,12 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="funcao"
                                         label="Função"
                                         value={funcao}
-                                        onChange={(e) => setFuncao(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const numerico = input.replace(/\D/g, '');
+                                            const output = numerico.slice(0, 35);
+                                            setFuncao(output);
+                                        }}
                                         style={{width: "23.5rem", display: "flex", marginRight: "1rem", marginBottom: "1rem"}}
                                     />
                                     <TextField
@@ -422,7 +543,12 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="sub_funcao"
                                         label="SubFunção"
                                         value={sub_funcao}
-                                        onChange={(e) => setSubFuncao(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const numerico = input.replace(/\D/g, '');
+                                            const output = numerico.slice(0, 35);
+                                            setSubFuncao(output);
+                                        }}
                                         style={{width: "23.5rem", display: "flex", marginBottom: "1rem"}}
                                     />
                                 </Box>
@@ -432,7 +558,12 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="programa"
                                         label="Programa"
                                         value={programa}
-                                        onChange={(e) => setPrograma(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const numerico = input.replace(/\D/g, '');
+                                            const output = numerico.slice(0, 35);
+                                            setPrograma(output);
+                                        }}
                                         style={{width: "23.5rem", display: "flex", marginRight: "1rem", marginBottom: "1rem"}}
                                     />
                                     <TextField
@@ -440,7 +571,12 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="acao"
                                         label="Ação"
                                         value={acao}
-                                        onChange={(e) => setAcao(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const numerico = input.replace(/\D/g, '');
+                                            const output = numerico.slice(0, 35);
+                                            setAcao(output);
+                                        }}
                                         style={{width: "23.5rem", display: "flex", marginBottom: "1rem"}}
                                     />
                                 </Box>
@@ -450,7 +586,12 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="natureza_despesa"
                                         label="Natureza de Despesa"
                                         value={natureza_despesa}
-                                        onChange={(e) => setNaturezaDespesa(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const numerico = input.replace(/\D/g, '');
+                                            const output = numerico.slice(0, 35);
+                                            setNaturezaDespesa(output);
+                                        }}
                                         style={{width: "23.5rem", display: "flex", marginRight: "1rem", marginBottom: "1rem"}}
                                     />
                                     <TextField
@@ -458,7 +599,12 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="sub_elemento"
                                         label="SubElemento"
                                         value={sub_elemento}
-                                        onChange={(e) => setSubElemento(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const numerico = input.replace(/\D/g, '');
+                                            const output = numerico.slice(0, 35);
+                                            setSubElemento(output);
+                                        }}
                                         style={{width: "23.5rem", display: "flex", marginBottom: "1rem"}}
                                     />
                                 </Box>
@@ -468,15 +614,24 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="fonte"
                                         label="Fonte"
                                         value={fonte}
-                                        onChange={(e) => setFonte(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const numerico = input.replace(/\D/g, '');
+                                            const output = numerico.slice(0, 35);
+                                            setFonte(output);
+                                        }}
                                         style={{width: "23.5rem", display: "flex", marginRight: "1rem", marginBottom: "1rem"}}
                                     />
                                     <TextField
                                         required
                                         id="origem_recurso"
-                                        label="Origem do Recurso"
+                                        label="Origem do Recurso (ex: Tesouro Municipal)"
                                         value={origem_recurso}
-                                        onChange={(e) => setOrigemRecurso(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const output = input.slice(0, 35);
+                                            setOrigemRecurso(output);
+                                        }}
                                         style={{width: "23.5rem", display: "flex", marginBottom: "1rem"}}
                                     />
                                 </Box>
@@ -495,17 +650,22 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="prazo_exec"
                                         label="Prazo de Execução"
                                         value={prazo_exec}
-                                        onChange={(e) => setPrazoExec(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const numerico = input.replace(/\D/g, '');
+                                            const output = numerico.slice(0, 6);
+                                            setPrazoExec(output);
+                                        }}
                                         style={{width: "23.5rem", display: "flex", marginRight: "1rem", marginBottom: "1rem"}}
                                     />
                                     <Autocomplete
                                         disablePortal
-                                        id="prazo_exec_tempo"
-                                        options={tempoEnum}
-                                        getOptionLabel={(tempo) => tempo} 
+                                        id="exec_tempo"
+                                        options={["", "dias", "semanas", "meses", "anos"]}
+                                        getOptionLabel={(temp) => temp} 
                                         onChange={(event, newValue) => setPrazoExecTempo(newValue)}
                                         value={prazo_exec_tempo}
-                                        sx={{width: "23.5rem", display: "flex", marginBottom: "1rem"}}
+                                        sx={{width: "15rem", display: "flex", marginBottom: "1rem"}}
                                         renderInput={(params) => ( <TextField {...params} label={"Tempo"}/>
                                         )}
                                     />
@@ -516,17 +676,22 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="prazo_vig"
                                         label="Prazo de Vigência"
                                         value={prazo_vig}
-                                        onChange={(e) => setPrazoVig(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const numerico = input.replace(/\D/g, '');
+                                            const output = numerico.slice(0, 6);
+                                            setPrazoVig(output);
+                                        }}
                                         style={{width: "23.5rem", display: "flex", marginRight: "1rem", marginBottom: "1rem"}}
                                     />
                                     <Autocomplete
                                         disablePortal
-                                        id="prazo_vig_tempo"
-                                        options={tempoEnum}
-                                        getOptionLabel={(tempo) => tempo} 
+                                        id="exec_vig"
+                                        options={["", "dias", "semanas", "meses", "anos"]}
+                                        getOptionLabel={(temp) => temp} 
                                         onChange={(event, newValue) => setPrazoVigTempo(newValue)}
                                         value={prazo_vig_tempo}
-                                        sx={{width: "23.5rem", display: "flex", marginBottom: "1rem"}}
+                                        sx={{width: "15rem", display: "flex", marginBottom: "1rem"}}
                                         renderInput={(params) => ( <TextField {...params} label={"Tempo"}/>
                                         )}
                                     />
@@ -539,29 +704,51 @@ const GerarDocumento = ({ open, onClose }) => {
                         <>
                             {
                             <Box>
+                                <Div>{"Contrato:"}</Div>
+                                <TextField
+                                    required
+                                    id="n_contrato"
+                                    label="Número do contrato"
+                                    value={n_contrato}
+                                    onChange={(e) => {
+                                        const input = e.target.value;
+                                        const output = input.slice(0, 30);
+                                        setNContrato(output);
+                                    }}
+                                    style={{width: "48rem",display: "flex", flexDirection: "column", marginBottom: "1rem"}}
+                                />
                                 <Div>{"Clásula Primeira - Do Objeto:"}</Div>
-                                    <TextField
-                                        required
-                                        id="objetivo"
-                                        label="Objeto"
-                                        value={objeto}
-                                        onChange={(e) => setObjeto(e.target.value)}
-                                        style={{width: "48rem",display: "flex", flexDirection: "column", marginBottom: "1rem"}}
-                                    />
-                                    <Div>{"Data Base do Reajustamento de Preços e Repactuação:"}</Div>
+                                <TextField
+                                    required
+                                    id="objeto"
+                                    label="Objeto"
+                                    value={objeto}
+                                    onChange={(e) => {
+                                        const input = e.target.value;
+                                        const output = input.slice(0, 30);
+                                        setObjeto(output);
+                                    }}
+                                    style={{width: "48rem",display: "flex", flexDirection: "column", marginBottom: "1rem"}}
+                                />
+                                <Div>{"Data Base do Reajustamento de Preços e Repactuação:"}</Div>
                                 <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center'}}>
                                     <TextField
                                         required
                                         id="data_base"
                                         label="Dia"
                                         value={data_base}
-                                        onChange={(e) => setDataBase(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const numerico = input.replace(/\D/g, '');
+                                            const output = numerico.slice(0, 2);
+                                            setDataBase(output);
+                                        }}
                                         style={{width: "23.5rem", display: "flex", marginRight: "1rem", marginBottom: "1rem"}}
                                     />
                                     <Autocomplete
                                         disablePortal
                                         id="data_base_mes"
-                                        options={mesesEnum}
+                                        options={["", ...mesesEnum]}
                                         getOptionLabel={(mes) => mes} 
                                         onChange={(event, newValue) => setDataBaseMes(newValue)}
                                         value={data_base_mes}
@@ -577,7 +764,11 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="documento_base"
                                         label="Documento (ex: CONCORRÊNCIA Nº. 12/2023)"
                                         value={documento_base}
-                                        onChange={(e) => setDocumentoBase(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const output = input.slice(0, 30);
+                                            setDocumentoBase(output);
+                                        }}
                                         style={{width: "48rem", display: "flex", marginBottom: "1rem"}}
                                     />
                                 </Box>
@@ -588,7 +779,11 @@ const GerarDocumento = ({ open, onClose }) => {
                                         id="termo_cooperacao"
                                         label="Número do termo (ex: 001/2023)"
                                         value={termo_cooperacao}
-                                        onChange={(e) => setTermoCooperacao(e.target.value)}
+                                        onChange={(e) => {
+                                            const input = e.target.value;
+                                            const output = input.slice(0, 30);
+                                            setTermoCooperacao(output);
+                                        }}
                                         style={{width: "48rem", display: "flex", marginBottom: "1rem"}}
                                     />
                                 </Box>
@@ -602,23 +797,25 @@ const GerarDocumento = ({ open, onClose }) => {
                         </Alert>
                     )}
                     <Box>
-                        <Button variant="contained" color="error" onClick={onClose} style={{ marginRight: '1.25rem' }}>
-                            Fechar
-                        </Button>
                         {activeStep > 1 && (
                             <Button variant="contained" onClick={handlePreviousStep} style={{ marginRight: '1.25rem' }}>
                                 Voltar
                             </Button>
                         )}
+                        <Button variant="contained" color="error" onClick={onClose} style={{ marginRight: '1.25rem' }}>
+                            Fechar
+                        </Button>
                         {activeStep < totalSteps && (
                             <Button variant="contained" onClick={handleNextStep}>
                                 Avançar
                             </Button>
                         )}
                         {activeStep === totalSteps && (
-                            <Button variant="contained" onClick={handleGerar}>
-                                Gerar
-                            </Button> 
+                            <>
+                                <Button color="success" startIcon={<DownloadIcon />} variant="contained" onClick={() => handleGerar("docx")} style={{ marginRight: '1.25rem' }}>
+                                    docx
+                                </Button>
+                            </>
                         )}
                     </Box>             
                 </Box>
